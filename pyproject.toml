@@ -1,0 +1,14 @@
+[project]
+name = "crypto-sentiment-analysis"
+version = "0.1.0"
+description = "Investigating crypto movements against Reddit sentiment."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "yfinance",
+    "pyarrow",
+    "praw",
+    "python-dotenv",
+    "vaderSentiment",
+]
