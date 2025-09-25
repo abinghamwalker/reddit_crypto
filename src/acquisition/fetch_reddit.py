@@ -1,37 +1,27 @@
 # src/acquisition/fetch_reddit_data.py
 
 import os
-import praw
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+from psaw import PushshiftAPI
 
 # --- Configuration ---
 SUBREDDITS = ["CryptoCurrency", "Bitcoin", "ethereum"]
-# For development, limit the number of posts to fetch per subreddit.
-# Set to None to fetch the maximum allowed by PRAW (around 1000).
-POST_LIMIT = 250
-
 KEYWORDS = {
     "BTC": ["bitcoin", "btc"],
     "ETH": ["ethereum", "eth", "ether"],
 }
+# Define the date range to match the market data script
+END_DATE = datetime.now(timezone.utc)
+START_DATE = END_DATE - timedelta(days=365)
+
 OUTPUT_DIR = "data/raw"
 
 # --- Helper Function ---
 def get_mentioned_crypto(text, keywords):
-    """Checks if any crypto keywords are present in the text and returns their symbols.
-
-    Args:
-        text (str): The input text (e.g., a post's title and body combined).
-        keywords (dict[str, list[str]]): A dictionary where keys are crypto symbols
-            (e.g., "BTC") and values are lists of corresponding keywords
-            (e.g., ["bitcoin", "btc"]).
-
-    Returns:
-        list[str] | None: A list of mentioned crypto symbols (e.g., ["BTC", "ETH"])
-                          if found, otherwise None.
-    """
+    """Checks if any crypto keywords are present in the text and returns their symbols."""
+    # This function remains the same
     mentioned = []
     text_lower = text.lower()
     for crypto, keys in keywords.items():
@@ -40,96 +30,97 @@ def get_mentioned_crypto(text, keywords):
     return mentioned if mentioned else None
 
 # --- Main Function ---
-def fetch_and_save_reddit_data(subreddits, keywords, limit, output_dir):
-    """Scrapes posts from subreddits, tags them, and saves them to a Parquet file.
+def fetch_and_save_reddit_data(subreddits, keywords, start_date, end_date, output_dir):
+    """Scrapes posts from a specific date range using the Pushshift API.
 
-    This function authenticates with the Reddit API using credentials stored in a
-    `.env` file in the project's root directory. The required variables are:
-    - REDDIT_CLIENT_ID
-    - REDDIT_CLIENT_SECRET
-    - REDDIT_USER_AGENT
-    - REDDIT_USERNAME
-    - REDDIT_PASSWORD
+    This function queries the Pushshift database for all submissions (posts) in
+    the given subreddits that were created between the start and end dates.
+    The filename of the output is generated dynamically based on the date range.
 
     Args:
-        subreddits (list[str]): A list of subreddit names to scrape, without the
-                                "r/" prefix.
-        keywords (dict[str, list[str]]): A dictionary for mapping keywords to
-                                         cryptocurrency symbols.
-        limit (int | None): The maximum number of new posts to fetch from each
-                            subreddit. Use None for the PRAW default limit (~1000).
-        output_dir (str): The relative path to the directory where the output
-                          Parquet file will be saved.
+        subreddits (list[str]): A list of subreddit names to scrape.
+        keywords (dict[str, list[str]]): A dictionary for mapping keywords to crypto symbols.
+        start_date (datetime): The starting date and time for the scrape (UTC).
+        end_date (datetime): The ending date and time for the scrape (UTC).
+        output_dir (str): The relative path to the directory for the output file.
 
     Returns:
-        None: This function does not return a value. Its side effect is creating a
-              file named `raw_reddit_data.parquet` in the output directory.
+        None: Creates a descriptively named Parquet file in the output directory.
     """
-    # Load environment variables from the .env file in the project root
     load_dotenv()
-    print("--- Starting Reddit Data Scrape ---")
+    print("--- Starting Reddit Data Scrape (Historical) ---")
 
-    # Authenticate with Reddit using environment variables
-    try:
-        reddit = praw.Reddit(
-            client_id=os.environ["REDDIT_CLIENT_ID"],
-            client_secret=os.environ["REDDIT_CLIENT_SECRET"],
-            user_agent=os.environ["REDDIT_USER_AGENT"],
-            username=os.environ["REDDIT_USERNAME"],
-            password=os.environ["REDDIT_PASSWORD"],
-        )
-        print("Successfully authenticated with Reddit API.")
-    except KeyError as e:
-        print(f"ERROR: Missing environment variable: {e}. "
-              "Please ensure your .env file is correctly set up.")
-        return
+    api = PushshiftAPI()
+
+    # Convert datetime objects to Unix timestamps for the API
+    start_epoch = int(start_date.timestamp())
+    end_epoch = int(end_date.timestamp())
+
+    print(f"Searching for posts from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+
+    # Search for submissions within the date range across all specified subreddits
+    # PSAW can be slow for very large queries, but it is the correct tool for the job.
+    generator = api.search_submissions(
+        after=start_epoch,
+        before=end_epoch,
+        subreddit=",".join(subreddits), # Comma-separated list of subreddits
+        filter=['id', 'created_utc', 'subreddit', 'title', 'selftext', 'score', 'num_comments'],
+        limit=None # Set to None to get all results in the date range
+    )
 
     all_posts = []
-
-    for sub_name in subreddits:
-        print(f"\nFetching posts from r/{sub_name}...")
-        subreddit = reddit.subreddit(sub_name)
+    print("Fetching posts from Pushshift... (This may take a while)")
+    for post in generator:
+        # PSAW returns a dictionary-like object, not a PRAW submission object
+        # The 'd_' attribute provides a dictionary view
+        post_data = post.d_
         
-        post_count = 0
-        try:
-            # Fetch the newest posts. For deep historical data, other tools are needed.
-            for post in subreddit.new(limit=limit):
-                combined_text = post.title + " " + post.selftext
-                mentioned_cryptos = get_mentioned_crypto(combined_text, keywords)
-                
-                if mentioned_cryptos:
-                    all_posts.append({
-                        "post_id": post.id,
-                        "timestamp_utc": datetime.utcfromtimestamp(post.created_utc),
-                        "subreddit": sub_name,
-                        "title": post.title,
-                        "body": post.selftext,
-                        "score": post.score,
-                        "num_comments": post.num_comments,
-                        "mentioned_crypto": mentioned_cryptos,
-                    })
-                    post_count += 1
-        except Exception as e:
-            print(f"An error occurred while fetching from r/{sub_name}: {e}")
-            continue # Move to the next subreddit
-
-        print(f"Found and saved {post_count} relevant posts from r/{sub_name}.")
+        # Some posts might be missing a title or body
+        title = post_data.get('title', '')
+        body = post_data.get('selftext', '')
+        
+        # Skip posts with removed body text
+        if body in ['[removed]', '[deleted]']:
+            continue
+            
+        combined_text = title + " " + body
+        mentioned_cryptos = get_mentioned_crypto(combined_text, keywords)
+        
+        if mentioned_cryptos:
+            all_posts.append({
+                "post_id": post_data.get('id'),
+                "timestamp_utc": datetime.fromtimestamp(post_data.get('created_utc'), tz=timezone.utc),
+                "subreddit": post_data.get('subreddit'),
+                "title": title,
+                "body": body,
+                "score": post_data.get('score'),
+                "num_comments": post_data.get('num_comments'),
+                "mentioned_crypto": mentioned_cryptos,
+            })
+        
+        if len(all_posts) % 1000 == 0 and len(all_posts) > 0:
+            print(f"  ... collected {len(all_posts)} relevant posts so far.")
 
     if not all_posts:
-        print("\nWARNING: No relevant posts were found across all subreddits. "
-              "The output file will not be created.")
+        print("\nWARNING: No relevant posts were found in the specified date range.")
         return
 
-    # --- Save Data to Parquet ---
-    print("\nConverting collected data to DataFrame...")
+    # --- Save Data to Parquet with Descriptive Filename ---
+    print(f"\nCollected a total of {len(all_posts)} relevant posts.")
+    print("Converting collected data to DataFrame...")
     df = pd.DataFrame(all_posts)
     df['timestamp_utc'] = pd.to_datetime(df['timestamp_utc'])
     
+    # Generate descriptive filename based on date range
+    start_tag = start_date.strftime('%Y%m%d')
+    end_tag = end_date.strftime('%Y%m%d')
+    filename = f"raw_reddit_data_{start_tag}_to_{end_tag}.parquet"
+    
     os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, "raw_reddit_data.parquet")
+    filepath = os.path.join(output_dir, filename)
     df.to_parquet(filepath)
 
-    print(f"Successfully saved {len(df)} total posts to '{filepath}'")
+    print(f"Successfully saved data to '{filepath}'")
     print("--- Reddit Data Scrape Complete ---")
 
 # --- Script Execution ---
@@ -137,6 +128,7 @@ if __name__ == "__main__":
     fetch_and_save_reddit_data(
         subreddits=SUBREDDITS,
         keywords=KEYWORDS,
-        limit=POST_LIMIT,
+        start_date=START_DATE,
+        end_date=END_DATE,
         output_dir=OUTPUT_DIR,
     )
