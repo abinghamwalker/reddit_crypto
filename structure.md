@@ -15,12 +15,16 @@
 ### 2. Acquire Market Data
 
 - Download historical price data (Open, High, Low, Close, Volume) for the chosen cryptocurrencies and time frame.
-- Clean and store it in a time-series format (e.g., CSV or database).
+  - fetch_market does this work according to time frame.
+- Clean and store it in a time-series format.
+  - fetch_market saves as parquet files.
 
 ### 3. Scrape Reddit Data
 
 - Use the Reddit API (via **PRAW** library in Python) to collect all posts and comments from the target subreddits within the defined date range.
+  - fetch_reddit does this work according to time frame.
 - Store the raw data, making sure to include timestamp, id, subreddit, title, and body/comment_text.
+  - fetch_market saves as parquet file.
 
 ---
 

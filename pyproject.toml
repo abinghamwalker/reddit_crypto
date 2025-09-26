@@ -8,7 +8,7 @@ dependencies = [
     "pandas",
     "yfinance",
     "pyarrow",
-    "praw",
+     "psaw",
     "python-dotenv",
     "vaderSentiment",
 ]

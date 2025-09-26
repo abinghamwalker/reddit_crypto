@@ -3,16 +3,8 @@
 import os
 import yfinance as yf
 import pandas as pd
-from datetime import date, timedelta
+from .. import config
 
-
-# --- Configuration ---
-TICKERS = ["BTC-USD", "ETH-USD"]
-END_DATE = date.today()
-START_DATE = END_DATE - timedelta(days=365)
-INTERVAL = "1h" 
-# Use a relative path, which is better practice. Data will be saved in a 'raw' subfolder.
-OUTPUT_DIR = "data/raw"
 
 # --- Main Function ---
 def fetch_and_save_market_data(tickers, start, end, interval, output_dir):
@@ -83,9 +75,9 @@ def fetch_and_save_market_data(tickers, start, end, interval, output_dir):
 # --- Script Execution ---
 if __name__ == "__main__":
     fetch_and_save_market_data(
-        tickers=TICKERS,
-        start=START_DATE,
-        end=END_DATE,
-        interval=INTERVAL,
+        tickers=config.TICKERS,
+        start=config.START_DATE,
+        end=config.END_DATE,
+        interval=config.NTERVAL,
         output_dir=OUTPUT_DIR
     )
