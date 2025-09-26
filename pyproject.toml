@@ -17,4 +17,5 @@ dependencies = [
     "emoji",
     "scipy",
     "seaborn",
+    "scikit-learn",
 ]

@@ -1,0 +1,2 @@
+Crypto,Avg Accuracy,Avg Precision,Avg Recall,Avg F1-Score,Baseline (Guessing 'Up')
+BTC,0.571,0.574,0.704,0.616,0.575

@@ -16,6 +16,7 @@ from src.processing.unify_data import unify_and_save_data
 from src.processing.clean_reddit_data import clean_and_save_reddit_data
 from src.processing.clean_market_data import clean_and_save_market_data
 from src.analysis.correlation_analysis import run_correlation_sweep
+from src.analysis.predictive_modeling import run_predictive_model
 
 
 
@@ -105,6 +106,40 @@ def main():
         print("\n>>> STAGE: ANALYZE - Running correlation analysis...")
         run_correlation_sweep(
             data_path=config.MASTER_DATA_PATH,
+            output_dir=config.RESULTS_DIR
+        )
+
+    # Stage 5: PREDICT 
+    if run_all or 'predict' in args.stages:
+        print("\n>>> STAGE: PREDICT - Building predictive models...")
+        
+        # --- Run BTC Model ---
+        run_predictive_model(
+            data_path=config.MASTER_DATA_PATH,
+            crypto='btc',
+            price_horizon_h=168,
+            sentiment_window_h=168,
+            lag_h=12,
+            output_dir=config.RESULTS_DIR
+        )
+
+        # --- Run ETH Long-Term Positive Model ---
+        run_predictive_model(
+            data_path=config.MASTER_DATA_PATH,
+            crypto='eth',
+            price_horizon_h=168,
+            sentiment_window_h=168,
+            lag_h=12,
+            output_dir=config.RESULTS_DIR
+        )
+        
+        # --- Run ETH Short-Term Negative Model ---
+        run_predictive_model(
+            data_path=config.MASTER_DATA_PATH,
+            crypto='eth',
+            price_horizon_h=24,
+            sentiment_window_h=24,
+            lag_h=12,
             output_dir=config.RESULTS_DIR
         )
 
