@@ -11,9 +11,9 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from src import config
 from src.acquisition.fetch_market import fetch_and_save_market_data
 from src.acquisition.fetch_reddit import fetch_and_save_reddit_data
-from src.preprocessing.process_sentiment import process_and_save_sentiment
-from src.preprocessing.unify_data import unify_and_save_data
-from src.preprocessing.clean_reddit_data import clean_and_save_reddit_data
+from src.processing.process_sentiment import process_and_save_sentiment
+from src.processing.unify_data import unify_and_save_data
+from src.processing.clean_reddit_data import clean_and_save_reddit_data
 from src.processing.clean_market_data import clean_and_save_market_data 
 
 
@@ -75,7 +75,7 @@ def main():
         )
         
         print("\n> Sub-step: Cleaning ETH Market Data...")
-        clean_save_market_data(
+        clean_and_save_market_data(
             input_path=config.RAW_ETH_MARKET_DATA_PATH,
             output_path=config.CLEANED_ETH_MARKET_DATA_PATH,
             ticker_name="ETH"
@@ -87,7 +87,7 @@ def main():
 
         print("\n> Sub-step: Processing Sentiment...")
         process_and_save_sentiment(
-            input_path=config.RAW_REDDIT_DATA_PATH, 
+            input_path=config.CLEANED_REDDIT_DATA_PATH,
             output_dir=config.PROCESSED_DATA_DIR
         )
 

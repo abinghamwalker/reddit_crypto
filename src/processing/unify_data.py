@@ -73,15 +73,10 @@ def unify_and_save_data(sentiment_path, btc_path, eth_path, output_dir):
     eth_df = eth_df.add_prefix('eth_')
     market_df = btc_df.join(eth_df, how='outer')
 
-    # --- THE FIX IS HERE ---
     # 1. Convert the timezone-aware market_df index to UTC.
     market_df.index = market_df.index.tz_convert('UTC')
 
-    # 2. Make the timezone-naive sentiment_pivot index aware of its UTC nature.
-    sentiment_pivot.index = sentiment_pivot.index.tz_localize('UTC')
-    # --- END OF FIX ---
-
-    # Now both indexes are timezone-aware and in UTC, so they can be joined.
+    # 2. Join both dataframes on the unified column
     master_df = market_df.join(sentiment_pivot, how='left')
 
     # --- 4. Final Cleaning ---
