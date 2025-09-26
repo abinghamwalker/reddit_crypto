@@ -14,7 +14,8 @@ from src.acquisition.fetch_reddit import fetch_and_save_reddit_data
 from src.processing.process_sentiment import process_and_save_sentiment
 from src.processing.unify_data import unify_and_save_data
 from src.processing.clean_reddit_data import clean_and_save_reddit_data
-from src.processing.clean_market_data import clean_and_save_market_data 
+from src.processing.clean_market_data import clean_and_save_market_data
+from src.analysis.correlation_analysis import run_correlation_sweep
 
 
 
@@ -108,6 +109,7 @@ def main():
         )
 
     print("\n--- Pipeline Finished ---")
+
 
 if __name__ == "__main__":
     main()

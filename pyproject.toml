@@ -15,4 +15,6 @@ dependencies = [
     "matplotlib",
     "praw",
     "emoji",
+    "scipy",
+    "seaborn",
 ]
