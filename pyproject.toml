@@ -11,4 +11,8 @@ dependencies = [
      "psaw",
     "python-dotenv",
     "vaderSentiment",
+    "jupyter",      
+    "matplotlib",
+    "praw",
+    "emoji",
 ]

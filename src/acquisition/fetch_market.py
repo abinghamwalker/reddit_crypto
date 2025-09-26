@@ -3,7 +3,7 @@
 import os
 import yfinance as yf
 import pandas as pd
-from .. import config
+from src import config
 
 
 # --- Main Function ---
@@ -72,12 +72,3 @@ def fetch_and_save_market_data(tickers, start, end, interval, output_dir):
 
     print("\n--- Market Data Download Complete ---")
 
-# --- Script Execution ---
-if __name__ == "__main__":
-    fetch_and_save_market_data(
-        tickers=config.TICKERS,
-        start=config.START_DATE,
-        end=config.END_DATE,
-        interval=config.NTERVAL,
-        output_dir=OUTPUT_DIR
-    )
