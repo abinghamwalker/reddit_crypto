@@ -12,3 +12,6 @@ wheels/
 # Env file with secrets
 .env
 
+structure.md
+Experimental Approach Recommendations.md
+
